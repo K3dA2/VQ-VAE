@@ -46,11 +46,11 @@ def training_loop(n_epochs, optimizer, model, loss_fn, device, data_loader,\
         if epoch % 10 == 0:
             if show_img:
                 pred_images = model.inference(1, 14, 14)
-                plt.imshow(np.transpose(pred_images[-1].cpu().numpy(), (1, 2, 0)))
+                plt.imshow(np.transpose(pred_images[-1].cpu().detach().numpy(), (1, 2, 0)))
                 plt.show()
             if save_img:
                 pred_images = model.inference(1, 14, 14)
-                pred_images = np.transpose(pred_images[-1].cpu().numpy(), (1, 2, 0))
+                pred_images = np.transpose(pred_images[-1].cpu().detach().numpy(), (1, 2, 0))
                 random_filename = str(uuid.uuid4()) + '.png'
 
                 # Specify the directory where you want to save the image
@@ -69,7 +69,6 @@ def training_loop(n_epochs, optimizer, model, loss_fn, device, data_loader,\
 
 
 if __name__ == "__main__":
-    timesteps = 1000
     path = '/Users/ayanfe/Documents/Datasets/Waifus'
     #model_path = '/Users/ayanfe/Documents/Code/Diffusion-Model/weights/waifu-diffusion-cts_epoch_80.pth'
     
@@ -86,7 +85,7 @@ if __name__ == "__main__":
     #loss_fn = nn.L1Loss().to(device)
     loss_fn = nn.MSELoss().to(device)
     print(count_parameters(model))
-    data_loader = get_data_loader(path, batch_size=16,num_samples=24_000)
+    data_loader = get_data_loader(path, batch_size=16,num_samples=1_000)
 
     # Optionally load model weights if needed
     #checkpoint = torch.load(model_path)
@@ -102,6 +101,5 @@ if __name__ == "__main__":
         device=device,
         data_loader=data_loader,
         epoch_start= 0,
-        
     )
     
