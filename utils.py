@@ -1,30 +1,56 @@
 from torchvision import datasets, transforms
-from torch.utils.data import DataLoader,Subset
+from torch.utils.data import DataLoader,Subset,Dataset
 import random
+from PIL import Image
+import numpy as np
+import os
+
+class CustomDataset(Dataset):
+    def __init__(self, image_files, transform=None):
+        self.image_files = image_files
+        self.transform = transform
+
+    def __len__(self):
+        return len(self.image_files)
+
+    def __getitem__(self, idx):
+        image_path = self.image_files[idx]
+        image = Image.open(image_path).convert('RGB')
+        if self.transform:
+            image = self.transform(image)
+        return image, 0  # Return a dummy label as it's not used
 
 def get_data_loader(path, batch_size, num_samples=None, shuffle=True):
     # Define your transforms
     transform = transforms.Compose([
-        transforms.Resize((64, 64)),
+        transforms.Resize((32, 32)),
         transforms.ToTensor(),
-        transforms.Normalize((0.7002, 0.6099, 0.6036), (0.2195, 0.2234, 0.2097))  # Adjust these values if you have RGB images
+        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))  # Adjust these values if you have RGB images
     ])
     
-    # Load the full dataset
-    full_dataset = datasets.ImageFolder(root=path, transform=transform)
+    # Get the list of all image files in the root directory, excluding non-image files
+    valid_extensions = ('.jpg', '.jpeg', '.png', '.bmp', '.gif')
+    image_files = [os.path.join(path, f) for f in os.listdir(path) if f.lower().endswith(valid_extensions)]
     
+    if len(image_files) == 0:
+        raise ValueError("No valid image files found in the specified directory.")
+
     # If num_samples is not specified, use the entire dataset
-    if num_samples is None or num_samples > len(full_dataset):
-        num_samples = len(full_dataset)
-    print("data length: ",len(full_dataset))
+    if num_samples is None or num_samples > len(image_files):
+        num_samples = len(image_files)
+    elif num_samples <= 0:
+        raise ValueError("num_samples should be a positive integer.")
+
+    print("data length: ", len(image_files))
+    
     # Generate a list of indices to sample from (ensure dataset size is not exceeded)
     if shuffle:
-        indices = random.sample(range(len(full_dataset)), num_samples)
+        indices = random.sample(range(len(image_files)), num_samples)
     else:
         indices = list(range(num_samples))
     
-    # Create a subset of the full dataset using the specified indices
-    subset_dataset = Subset(full_dataset, indices)
+    # Create the subset dataset
+    subset_dataset = CustomDataset([image_files[i] for i in indices], transform=transform)
     
     # Create a DataLoader for the subset
     data_loader = DataLoader(subset_dataset, batch_size=batch_size, shuffle=shuffle)
@@ -33,3 +59,23 @@ def get_data_loader(path, batch_size, num_samples=None, shuffle=True):
 
 def count_parameters(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
+
+def save_img_tensors_as_grid(img_tensors, nrows, f):
+    img_tensors = img_tensors.permute(0, 2, 3, 1)
+    imgs_array = img_tensors.detach().cpu().numpy()
+    imgs_array[imgs_array < -0.5] = -0.5
+    imgs_array[imgs_array > 0.5] = 0.5
+    imgs_array = 255 * (imgs_array + 0.5)
+    (batch_size, img_size) = img_tensors.shape[:2]
+    ncols = batch_size // nrows
+    img_arr = np.zeros((nrows * img_size, ncols * img_size, 3))
+    for idx in range(batch_size):
+        row_idx = idx // ncols
+        col_idx = idx % ncols
+        row_start = row_idx * img_size
+        row_end = row_start + img_size
+        col_start = col_idx * img_size
+        col_end = col_start + img_size
+        img_arr[row_start:row_end, col_start:col_end] = imgs_array[idx]
+
+    Image.fromarray(img_arr.astype(np.uint8), "RGB").save(f"{f}.jpg")

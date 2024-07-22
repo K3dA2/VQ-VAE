@@ -67,7 +67,7 @@ class Encoder(nn.Module):
             nn.ReLU(),
             ResNet(256,256),
             nn.ReLU(),
-            SelfAttention(256),
+            
             nn.Conv2d(256,latent_dim,3)
         )
     

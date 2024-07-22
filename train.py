@@ -8,13 +8,13 @@ import datetime
 import os
 import torch.nn.utils as utils
 from model import VQVAE 
-from utils import get_data_loader,count_parameters
+from utils import get_data_loader,count_parameters,save_img_tensors_as_grid
 import uuid
 
 
-def training_loop(n_epochs, optimizer, model, loss_fn, device, data_loader,\
+def training_loop(n_epochs, optimizer, model, loss_fn, device, data_loader,valid_loader,\
                    max_grad_norm=1.0, epoch_start = 0,\
-                    save_img = False, show_img = True):
+                    save_img = True, show_img = False):
     model.train()
     for epoch in range(epoch_start,n_epochs):
         loss_train = 0.0
@@ -45,21 +45,28 @@ def training_loop(n_epochs, optimizer, model, loss_fn, device, data_loader,\
         print('{} Epoch {}, Training loss {}'.format(datetime.datetime.now(), epoch, loss_train / len(data_loader)))
         if epoch % 10 == 0:
             if show_img:
-                pred_images = model.inference(1, 14, 14)
+                pred_images = model.inference(1, 6, 6)
                 plt.imshow(np.transpose(pred_images[-1].cpu().detach().numpy(), (1, 2, 0)))
                 plt.show()
             if save_img:
-                pred_images = model.inference(1, 14, 14)
+                pred_images = model.inference(1, 6, 6)
                 pred_images = np.transpose(pred_images[-1].cpu().detach().numpy(), (1, 2, 0))
                 random_filename = str(uuid.uuid4()) + '.png'
 
                 # Specify the directory where you want to save the image
-                save_directory = path
+                save_directory = ""
 
                 # Create the full path including the directory and filename
                 full_path = os.path.join(save_directory, random_filename)
                 # Save the image with the random filename
                 plt.savefig(full_path, bbox_inches='tight', pad_inches=0)
+                with torch.no_grad():
+                    for valid_tensors, _ in valid_loader:
+                        break
+
+                    save_img_tensors_as_grid(valid_tensors, 4, "true1")
+                    val_img,_ = model(valid_tensors.to(device))
+                    save_img_tensors_as_grid(val_img, 4, "recon1")
 
             torch.save({
             'epoch': epoch,
@@ -69,8 +76,9 @@ def training_loop(n_epochs, optimizer, model, loss_fn, device, data_loader,\
 
 
 if __name__ == "__main__":
-    path = '/Users/ayanfe/Documents/Datasets/Waifus'
-    #model_path = '/Users/ayanfe/Documents/Code/Diffusion-Model/weights/waifu-diffusion-cts_epoch_80.pth'
+    path = '/Users/ayanfe/Documents/Datasets/Waifus/Train'
+    val_path = '/Users/ayanfe/Documents/Datasets/Waifus/Val'
+    model_path = '/Users/ayanfe/Documents/Code/VQ-VAE/weights/waifu-vqvae_epoch_90.pth'
     
     device = "cpu"
     if torch.cuda.is_available():
@@ -81,25 +89,37 @@ if __name__ == "__main__":
 
     model = VQVAE()  # Assuming Unet is correctly imported and defined
     model.to(device)
-    optimizer = optim.AdamW(model.parameters(), lr=3e-4, weight_decay=1e-4)
+    optimizer = optim.AdamW(model.parameters(), lr=3e-4)
     #loss_fn = nn.L1Loss().to(device)
     loss_fn = nn.MSELoss().to(device)
     print(count_parameters(model))
-    data_loader = get_data_loader(path, batch_size=16,num_samples=1_000)
+    data_loader = get_data_loader(path, batch_size=64,num_samples=30_000)
+    val_loader = get_data_loader(val_path, batch_size=64,num_samples=10_000)
 
     # Optionally load model weights if needed
-    #checkpoint = torch.load(model_path)
-    #model.load_state_dict(checkpoint['model_state_dict'])
-    #optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-    #epoch = checkpoint['epoch']
-    
+    checkpoint = torch.load(model_path)
+    model.load_state_dict(checkpoint['model_state_dict'])
+    optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+    epoch = checkpoint['epoch']
+
+    with torch.no_grad():
+        for valid_tensors, _ in val_loader:
+            break
+
+        save_img_tensors_as_grid(valid_tensors, 4, "true1")
+        val_img,_ = model(valid_tensors.to(device))
+        save_img_tensors_as_grid(val_img, 4, "recon1")
+
+'''
     training_loop(
-        n_epochs=1000,
+        n_epochs=100,
         optimizer=optimizer,
         model=model,
         loss_fn=loss_fn,
         device=device,
         data_loader=data_loader,
-        epoch_start= 0,
+        valid_loader= val_loader,
+        epoch_start= epoch + 1,
     )
+'''
     

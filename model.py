@@ -6,7 +6,7 @@ import unittest
 from modules import Encoder,Decoder
 
 class VQVAE(nn.Module):
-    def __init__(self,latent_dim = 32, num_embeddings = 128, beta = 0.2) -> None:
+    def __init__(self,latent_dim = 32, num_embeddings = 128, beta = 0.25) -> None:
         super().__init__()
         self.encoder = Encoder(latent_dim=latent_dim)
         self.decoder = Decoder(latent_dim=latent_dim)
@@ -68,7 +68,7 @@ class VQVAE(nn.Module):
 # Define the VQVAE model
 model = VQVAE(latent_dim=32, num_embeddings=128)
 # Create a dummy input image
-img = torch.randn(2, 3, 128, 128)
+img = torch.randn(2, 3, 32, 32)
 # Pass the image through the model
 out,loss = model(img)
 
@@ -76,5 +76,5 @@ print(f'out shape: {out.shape}')
 print(f'loss shape: {loss}')
 
 # Generate random output image
-output_img = model.inference(1, 14, 14)
+output_img = model.inference(1, 6, 6)
 print(output_img.shape)  # Expected output: torch.Size([2, 3, output_height, output_width])
