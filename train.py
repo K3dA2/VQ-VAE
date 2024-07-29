@@ -110,7 +110,6 @@ if __name__ == "__main__":
         val_img,_ = model(valid_tensors.to(device))
         save_img_tensors_as_grid(val_img, 4, "recon1")
 
-'''
     training_loop(
         n_epochs=100,
         optimizer=optimizer,
@@ -121,5 +120,5 @@ if __name__ == "__main__":
         valid_loader= val_loader,
         epoch_start= epoch + 1,
     )
-'''
+
     
