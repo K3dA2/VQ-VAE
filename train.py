@@ -8,8 +8,10 @@ import datetime
 import os
 import torch.nn.utils as utils
 from model import VQVAE 
+#from model2 import VQVAE
 from utils import get_data_loader,count_parameters,save_img_tensors_as_grid
 import uuid
+from torch.utils.tensorboard import SummaryWriter
 
 
 def training_loop(n_epochs, optimizer, model, loss_fn, device, data_loader,valid_loader,\
@@ -20,36 +22,52 @@ def training_loop(n_epochs, optimizer, model, loss_fn, device, data_loader,valid
         loss_train = 0.0
 
         progress_bar = tqdm(data_loader, desc=f'Epoch {epoch}', unit=' batch')
-        for imgs, _ in progress_bar:
+        for batch_idx, (imgs, _) in enumerate(progress_bar):
             imgs = imgs.to(device)
 
-            
-            outputs,c_loss = model(imgs)
-            loss = loss_fn(outputs, imgs) + c_loss
-            
+            outputs, vq_loss = model(imgs)
+            #print(model.return_indices(imgs))
+            mse_loss = loss_fn(outputs, imgs)
+            loss = mse_loss + vq_loss 
+
             optimizer.zero_grad()
             loss.backward()
-            #utils.clip_grad_norm_(model.parameters(), max_grad_norm)
+            # utils.clip_grad_norm_(model.parameters(), max_grad_norm)
             optimizer.step()
 
             loss_train += loss.item()
-            progress_bar.set_postfix(loss=loss.item())
 
+            # Log losses to TensorBoard
+            writer.add_scalar('Loss/Total', loss.item(), epoch * len(data_loader) + batch_idx)
+            writer.add_scalar('Loss/Reconstruction', mse_loss.item(), epoch * len(data_loader) + batch_idx)
+            writer.add_scalar('Loss/VectorQuantization', vq_loss.item(), epoch * len(data_loader) + batch_idx)
+
+            # Log embeddings to TensorBoard
+            if batch_idx % 10 == 0:
+                writer.add_embedding(
+                    model.codebook.weight.data,
+                    metadata=[f"embedding_{i}" for i in range(model.num_embeddings)],
+                    global_step=epoch * len(data_loader) + batch_idx,
+                    tag='Codebook'
+                )
+            
+            progress_bar.set_postfix(loss=loss.item(), mse_loss=mse_loss.item(), vq_loss=vq_loss.item())
+        
         # Save model checkpoint with the current epoch in the filename
-        model_filename = f'waifu-vqvae_epoch_{epoch}.pth'
+        model_filename = f'waifu-vqvae_epoch.pth'
         model_path = os.path.join('/Users/ayanfe/Documents/Code/VQ-VAE/weights', model_filename)
         
         with open("waifu-vqvae_epoch-loss.txt", "a") as file:
             file.write(f"{loss_train / len(data_loader)}\n")
         
         print('{} Epoch {}, Training loss {}'.format(datetime.datetime.now(), epoch, loss_train / len(data_loader)))
-        if epoch % 10 == 0:
+        if epoch % 5 == 0:
             if show_img:
-                pred_images = model.inference(1, 6, 6)
+                pred_images = model.inference(1, 14, 14)
                 plt.imshow(np.transpose(pred_images[-1].cpu().detach().numpy(), (1, 2, 0)))
                 plt.show()
             if save_img:
-                pred_images = model.inference(1, 6, 6)
+                pred_images = model.inference(1, 14, 14)
                 pred_images = np.transpose(pred_images[-1].cpu().detach().numpy(), (1, 2, 0))
                 random_filename = str(uuid.uuid4()) + '.png'
 
@@ -73,13 +91,15 @@ def training_loop(n_epochs, optimizer, model, loss_fn, device, data_loader,valid
             'model_state_dict': model.state_dict(),
             'optimizer_state_dict': optimizer.state_dict(),
             }, model_path)
+    writer.close()
 
 
 if __name__ == "__main__":
     path = '/Users/ayanfe/Documents/Datasets/Waifus/Train'
     val_path = '/Users/ayanfe/Documents/Datasets/Waifus/Val'
-    model_path = '/Users/ayanfe/Documents/Code/VQ-VAE/weights/waifu-vqvae_epoch_90.pth'
-    
+    model_path = '/Users/ayanfe/Documents/Code/VQ-VAE/weights/waifu-vqvae_epoch.pth'
+    epoch = 0
+
     device = "cpu"
     if torch.cuda.is_available():
         device = "cuda"
@@ -87,21 +107,26 @@ if __name__ == "__main__":
         device = "mps"
     print(f"using device: {device}")
 
-    model = VQVAE()  # Assuming Unet is correctly imported and defined
+    model = VQVAE(latent_dim=2,beta=0.25)  # Assuming Unet is correctly imported and defined
     model.to(device)
-    optimizer = optim.AdamW(model.parameters(), lr=3e-4)
+    optimizer = optim.AdamW(model.parameters(), lr=2e-4)
     #loss_fn = nn.L1Loss().to(device)
     loss_fn = nn.MSELoss().to(device)
+    writer = SummaryWriter(log_dir='./logs')
+
     print(count_parameters(model))
-    data_loader = get_data_loader(path, batch_size=64,num_samples=30_000)
+    data_loader = get_data_loader(path, batch_size=64,num_samples=20_000)
     val_loader = get_data_loader(val_path, batch_size=64,num_samples=10_000)
 
+    '''
     # Optionally load model weights if needed
     checkpoint = torch.load(model_path)
     model.load_state_dict(checkpoint['model_state_dict'])
     optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
     epoch = checkpoint['epoch']
-
+    '''
+    
+    print(model.inference(1, 14, 14).shape)
     with torch.no_grad():
         for valid_tensors, _ in val_loader:
             break

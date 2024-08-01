@@ -8,23 +8,28 @@ import unittest
 class ResNet(nn.Module):
     def __init__(self, in_channels = 3 ,out_channels = 32):
         super().__init__()
+        if in_channels > 3:
+            norm = 4
+        else:
+            norm = 1
         self.num_channels = out_channels
         self.in_channels = in_channels
         self.network = nn.Sequential(
-            nn.BatchNorm2d(in_channels),
-            nn.GELU(),
-            nn.Conv2d(in_channels, out_channels*2, kernel_size=3, padding=1),
-            nn.BatchNorm2d(out_channels*2),
-            nn.GELU(),
-            nn.Conv2d(out_channels*2, in_channels, kernel_size=3, padding=1)
+            nn.GroupNorm(norm,in_channels),
+            nn.SiLU(),
+            nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1),
+            nn.GroupNorm(norm,out_channels),
+            nn.SiLU(),
+            nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1)
         )
-        self.out_conv = nn.Conv2d(in_channels,out_channels,1)
+        if in_channels == out_channels:
+            self.residual_layer = nn.Identity()
+        else:
+            self.residual_layer = nn.Conv2d(in_channels, out_channels, kernel_size=1, padding=0)
 
     def forward(self, x):
         out = self.network(x)
-        out = torch.add(out,x)
-        out = self.out_conv(out)
-        return out
+        return torch.add(out,self.residual_layer(x))
     
 class SelfAttention(nn.Module):
     def __init__(self, channels):
@@ -53,7 +58,9 @@ class Encoder(nn.Module):
     def __init__(self, latent_dim = 32) -> None:
         super().__init__()
         self.net = nn.Sequential(
-            ResNet(3,128),
+            nn.Conv2d(3, 64, kernel_size=3, padding=1),
+            nn.ReLU(),
+            ResNet(64,128),
             nn.ReLU(),
             ResNet(128,128),
             nn.ReLU(),
@@ -69,10 +76,12 @@ class Encoder(nn.Module):
             nn.ReLU(),
             
             nn.Conv2d(256,latent_dim,3)
+            
         )
     
     def forward(self,img):
         out = self.net(img)
+        #print(out.shape)
         return out
 
 class Decoder(nn.Module):

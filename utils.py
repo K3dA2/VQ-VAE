@@ -23,7 +23,7 @@ class CustomDataset(Dataset):
 def get_data_loader(path, batch_size, num_samples=None, shuffle=True):
     # Define your transforms
     transform = transforms.Compose([
-        transforms.Resize((32, 32)),
+        transforms.Resize((64, 64)),
         transforms.ToTensor(),
         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))  # Adjust these values if you have RGB images
     ])
