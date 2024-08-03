@@ -6,15 +6,19 @@ import unittest
 from modules import Encoder,Decoder
 
 class VQVAE(nn.Module):
-    def __init__(self,latent_dim = 1, num_embeddings = 512, beta = 0.25) -> None:
+    def __init__(self,latent_dim = 1, num_embeddings = 512, beta = 0.25,use_ema = True,ema_decay = 0.99) -> None:
         super().__init__()
         self.encoder = Encoder(latent_dim=latent_dim)
         self.decoder = Decoder(latent_dim=latent_dim)
         self.codebook = nn.Embedding(num_embeddings,latent_dim)
+        self.register_buffer('ema_cluster_size', torch.zeros(num_embeddings))
+        self.register_buffer('ema_w', torch.zeros(num_embeddings, latent_dim))
         self.codebook.weight.data.uniform_(-1 / num_embeddings, 1 / num_embeddings)
         self.num_embeddings = num_embeddings
         self.latent_dim = latent_dim
         self.beta = beta
+        self.use_ema = use_ema
+        self.ema_decay = ema_decay
     
     def forward(self, img):
         # Encode the image
@@ -41,12 +45,38 @@ class VQVAE(nn.Module):
         
         commitment_loss = torch.mean((z_q.detach() - z) ** 2)
         codebook_loss = torch.mean((z_q - z.detach()) ** 2)
-
-        loss = commitment_loss + codebook_loss * self.beta
+        if self.use_ema:
+            # EMA update for the codebook
+            self.ema_inplace_update(indices, z_copy)
+            loss = commitment_loss
+        else:
+            loss = commitment_loss + codebook_loss * self.beta
 
         out = self.decoder(z_q)
         return out, loss
     
+    def ema_inplace_update(self, indices, flat_inputs):
+        encodings = F.one_hot(indices, self.num_embeddings).float()
+        
+        ema_cluster_size = torch.sum(encodings, dim=(0, 1))  # Sum across batch and latent dimensions
+
+        # Permute encodings to have shape [num_embeddings, batch_size * num_latents]
+        encodings = encodings.permute(2, 0, 1).reshape(self.num_embeddings, -1)
+        
+        # Reshape flat_inputs to [batch_size * num_latents, latent_dim]
+        flat_inputs = flat_inputs.reshape(-1, flat_inputs.shape[-1])
+        
+        # Perform matrix multiplication
+        ema_w = torch.matmul(encodings, flat_inputs)  # Shape: [num_embeddings, latent_dim]
+
+        self.ema_cluster_size.mul_(self.ema_decay).add_(ema_cluster_size, alpha=1 - self.ema_decay)
+        self.ema_w.mul_(self.ema_decay).add_(ema_w, alpha=1 - self.ema_decay)
+
+        n = torch.sum(self.ema_cluster_size)
+        self.ema_cluster_size = ((self.ema_cluster_size + 1e-5) / (n + self.num_embeddings * 1e-5) * n)
+
+        self.codebook.weight.data.copy_(self.ema_w / self.ema_cluster_size.unsqueeze(1))
+
     def inference(self, batch_size, height=64, width=64,show=True,save=False):
         latent_dim = self.latent_dim
         num_embeddings = self.num_embeddings

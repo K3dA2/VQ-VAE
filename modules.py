@@ -60,12 +60,12 @@ class Encoder(nn.Module):
         self.net = nn.Sequential(
             nn.Conv2d(3, 64, kernel_size=3, padding=1),
             nn.ReLU(),
-            ResNet(64,128),
+            nn.Conv2d(64, 128, kernel_size=3, padding=1),
             nn.ReLU(),
-            ResNet(128,128),
+            nn.Conv2d(128, 128, kernel_size=3, padding=1),
             nn.ReLU(),
             nn.MaxPool2d(2),
-            ResNet(128,256),
+            nn.Conv2d(128, 256, kernel_size=3, padding=1),
             nn.ReLU(),
             ResNet(256,512),
             nn.ReLU(),
@@ -74,8 +74,7 @@ class Encoder(nn.Module):
             nn.ReLU(),
             ResNet(256,256),
             nn.ReLU(),
-            
-            nn.Conv2d(256,latent_dim,3)
+            nn.Conv2d(256,latent_dim,kernel_size=3, padding=1)
             
         )
     
@@ -87,35 +86,34 @@ class Encoder(nn.Module):
 class Decoder(nn.Module):
     def __init__(self, latent_dim = 32) -> None:
         super().__init__()
-        self.res = ResNet(latent_dim,128)
-        self.res1 = ResNet(128,128)
-        self.res2 = ResNet(128,256)
-        self.res3 = ResNet(256,512)
-        self.res4 = ResNet(512,256)
-        self.res5 = ResNet(256,256)
-        self.up = nn.ConvTranspose2d(128, 128, 3)
-        self.up1 = nn.ConvTranspose2d(128, 128, 3, stride=2, padding=1,output_padding=1)
-        self.up2 = nn.ConvTranspose2d(512, 512, 3, stride=2, padding=1,output_padding=1)
-        self.out = nn.Conv2d(256,3,1)
-        
+        self.net = nn.Sequential(
+            nn.Upsample(scale_factor=2),
+            ResNet(latent_dim,128),
+            nn.ReLU(),
+            nn.Conv2d(128, 128, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(128, 256, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(256, 512, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(512, 128, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.Upsample(scale_factor=2),
+            ResNet(128,64),
+            nn.ReLU(),
+            ResNet(64,32),
+            nn.ReLU(),
+            nn.Conv2d(32, 3, kernel_size=3, padding=1)
+        )
     
     def forward(self,img):
-        out = F.relu(self.res(img))
-        out = self.up(out)
-        out = F.relu(self.res1(out))
-        out = self.up1(out)
-        out = F.relu(self.res2(out))
-        out = F.relu(self.res3(out))
-        out = self.up2(out)
-        out = F.relu(self.res4(out))
-        out = F.relu(self.res5(out))
-        out = self.out(out)
+        out = self.net(img)
         return out
     
 class TestDecoder(unittest.TestCase):
     def test_decoder_output_shape(self):
         # Create a dummy input image with latent representation size
-        img = torch.randn(2, 32, 14, 14)
+        img = torch.randn(2, 32, 16, 16)
         
         # Initialize the decoder
         decoder = Decoder(latent_dim=32)
@@ -123,6 +121,7 @@ class TestDecoder(unittest.TestCase):
         # Pass the image through the decoder
         out = decoder(img)
         
+        print(out.shape)
         # Check the output shape
         self.assertEqual(out.shape, (2, 3, 64, 64), f"Output shape mismatch: expected (2, 32, 32, 32), got {out.shape}")
 

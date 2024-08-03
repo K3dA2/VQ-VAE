@@ -63,11 +63,11 @@ def training_loop(n_epochs, optimizer, model, loss_fn, device, data_loader,valid
         print('{} Epoch {}, Training loss {}'.format(datetime.datetime.now(), epoch, loss_train / len(data_loader)))
         if epoch % 5 == 0:
             if show_img:
-                pred_images = model.inference(1, 14, 14)
+                pred_images = model.inference(1, 16, 16)
                 plt.imshow(np.transpose(pred_images[-1].cpu().detach().numpy(), (1, 2, 0)))
                 plt.show()
             if save_img:
-                pred_images = model.inference(1, 14, 14)
+                pred_images = model.inference(1, 16, 16)
                 pred_images = np.transpose(pred_images[-1].cpu().detach().numpy(), (1, 2, 0))
                 random_filename = str(uuid.uuid4()) + '.png'
 
@@ -107,7 +107,7 @@ if __name__ == "__main__":
         device = "mps"
     print(f"using device: {device}")
 
-    model = VQVAE(latent_dim=2,beta=0.25)  # Assuming Unet is correctly imported and defined
+    model = VQVAE(latent_dim=2,num_embeddings=128,beta=0.25)  # Assuming Unet is correctly imported and defined
     model.to(device)
     optimizer = optim.AdamW(model.parameters(), lr=2e-4)
     #loss_fn = nn.L1Loss().to(device)
@@ -115,7 +115,7 @@ if __name__ == "__main__":
     writer = SummaryWriter(log_dir='./logs')
 
     print(count_parameters(model))
-    data_loader = get_data_loader(path, batch_size=64,num_samples=20_000)
+    data_loader = get_data_loader(path, batch_size=64,num_samples=30_000)
     val_loader = get_data_loader(val_path, batch_size=64,num_samples=10_000)
 
     '''
@@ -126,7 +126,7 @@ if __name__ == "__main__":
     epoch = checkpoint['epoch']
     '''
     
-    print(model.inference(1, 14, 14).shape)
+    print(model.inference(1, 16, 16).shape)
     with torch.no_grad():
         for valid_tensors, _ in val_loader:
             break
