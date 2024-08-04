@@ -67,7 +67,7 @@ class Encoder(nn.Module):
             nn.MaxPool2d(2),
             nn.Conv2d(128, 256, kernel_size=3, padding=1),
             nn.ReLU(),
-            ResNet(256,512),
+            nn.Conv2d(256, 512, kernel_size=3, padding=1),
             nn.ReLU(),
             nn.MaxPool2d(2),
             ResNet(512,256),
@@ -88,9 +88,9 @@ class Decoder(nn.Module):
         super().__init__()
         self.net = nn.Sequential(
             nn.Upsample(scale_factor=2),
-            ResNet(latent_dim,128),
+            nn.Conv2d(latent_dim, 64, kernel_size=3, padding=1),
             nn.ReLU(),
-            nn.Conv2d(128, 128, kernel_size=3, padding=1),
+            nn.Conv2d(64, 128, kernel_size=3, padding=1),
             nn.ReLU(),
             nn.Conv2d(128, 256, kernel_size=3, padding=1),
             nn.ReLU(),

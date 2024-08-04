@@ -118,7 +118,7 @@ class VQVAE(nn.Module):
 
 # Example usage:
 # Define the VQVAE model
-model = VQVAE(latent_dim= 2, num_embeddings=512)
+model = VQVAE(latent_dim= 1, num_embeddings=512, use_ema=False)
 # Create a dummy input image
 img = torch.randn(2, 3, 64, 64)
 # Pass the image through the model
@@ -128,5 +128,5 @@ print(f'out shape: {out.shape}')
 print(f'loss shape: {loss}')
 
 # Generate random output image
-output_img = model.inference(1, 14, 14)
+output_img = model.inference(1, 16, 16)
 print(output_img.shape)  # Expected output: torch.Size([2, 3, output_height, output_width])
