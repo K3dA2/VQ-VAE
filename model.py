@@ -52,6 +52,9 @@ class VQVAE(nn.Module):
         else:
             loss = commitment_loss + codebook_loss * self.beta
 
+        # Straight through estimator
+        z_q = z + (z_q - z).detach()
+
         out = self.decoder(z_q)
         return out, loss
     
