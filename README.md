@@ -23,11 +23,11 @@ The model was trained for 100 epochs, with the training loss plotted over time a
 
 Below are some examples of original images and their corresponding reconstructions by the VQ-VAE model:
 
-![true1 copy](https://github.com/user-attachments/assets/c6770715-8256-4dbe-be3b-0c06378ae760)
+![true1](https://github.com/user-attachments/assets/4ced3f78-7c2d-4920-a67c-aa29a9cd6c83)
 
 True Images
 
-![recon1 copy](https://github.com/user-attachments/assets/7dd93aac-f6ae-4fb7-b8bd-bbb95aa5945c)
+![recon1](https://github.com/user-attachments/assets/3b62decb-4512-4214-a67c-bf231bcead32)
 
 Reconstructed Images
 
