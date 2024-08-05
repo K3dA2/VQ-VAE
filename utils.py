@@ -25,7 +25,7 @@ def get_data_loader(path, batch_size, num_samples=None, shuffle=True):
     transform = transforms.Compose([
         transforms.Resize((64, 64)),
         transforms.ToTensor(),
-        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))  # Adjust these values if you have RGB images
+        transforms.Normalize((0.7002, 0.6099, 0.6036), (0.2195, 0.2234, 0.2097))  # Adjust these values if you have RGB images
     ])
     
     # Get the list of all image files in the root directory, excluding non-image files
@@ -60,15 +60,21 @@ def get_data_loader(path, batch_size, num_samples=None, shuffle=True):
 def count_parameters(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
-def save_img_tensors_as_grid(img_tensors, nrows, f):
+def save_img_tensors_as_grid(img_tensors, nrows, f, mean=[0.7002, 0.6099, 0.6036], std=[0.2195, 0.2234, 0.2097]):
     img_tensors = img_tensors.permute(0, 2, 3, 1)
     imgs_array = img_tensors.detach().cpu().numpy()
-    imgs_array[imgs_array < -0.5] = -0.5
-    imgs_array[imgs_array > 0.5] = 0.5
-    imgs_array = 255 * (imgs_array + 0.5)
-    (batch_size, img_size) = img_tensors.shape[:2]
+
+    # De-normalize the images
+    mean = np.array(mean)
+    std = np.array(std)
+    imgs_array = imgs_array * std + mean
+    imgs_array = np.clip(imgs_array, 0, 1)
+    imgs_array = (imgs_array * 255).astype(np.uint8)
+
+    (batch_size, img_size, _, _) = img_tensors.shape
     ncols = batch_size // nrows
-    img_arr = np.zeros((nrows * img_size, ncols * img_size, 3))
+    img_arr = np.zeros((nrows * img_size, ncols * img_size, 3), dtype=np.uint8)
+
     for idx in range(batch_size):
         row_idx = idx // ncols
         col_idx = idx % ncols
@@ -78,4 +84,4 @@ def save_img_tensors_as_grid(img_tensors, nrows, f):
         col_end = col_start + img_size
         img_arr[row_start:row_end, col_start:col_end] = imgs_array[idx]
 
-    Image.fromarray(img_arr.astype(np.uint8), "RGB").save(f"{f}.jpg")
+    Image.fromarray(img_arr, "RGB").save(f"{f}.jpg")

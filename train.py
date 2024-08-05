@@ -8,20 +8,19 @@ import datetime
 import os
 import torch.nn.utils as utils
 from model import VQVAE 
-#from model2 import VQVAE
 from utils import get_data_loader, count_parameters, save_img_tensors_as_grid
 import uuid
-from torch.utils.tensorboard import SummaryWriter
+
 
 
 def training_loop(n_epochs, optimizer, model, loss_fn, device, data_loader, valid_loader,
                   max_grad_norm=1.0, epoch_start=0, save_img=True, show_img=False,
-                ema_alpha=0.99):
+                ema_alpha=0.99,usage_threshold=1.0):
 
     model.train()
-    writer = SummaryWriter(log_dir='./logs')
     ema_loss = None
     scheduler = None
+    previous_loss = None
 
     for epoch in range(epoch_start, n_epochs):
         loss_train = 0.0
@@ -43,7 +42,7 @@ def training_loop(n_epochs, optimizer, model, loss_fn, device, data_loader, vali
             loss.backward()
 
             
-            utils.clip_grad_norm_(model.parameters(), max_grad_norm)
+            #utils.clip_grad_norm_(model.parameters(), max_grad_norm)
             optimizer.step()
             optimizer.zero_grad()
 
@@ -73,22 +72,7 @@ def training_loop(n_epochs, optimizer, model, loss_fn, device, data_loader, vali
             datetime.datetime.now(), epoch, avg_loss_train, avg_mse_loss_train, avg_vq_loss_train))
 
         if epoch % 5 == 0:
-            if show_img:
-                pred_images = model.inference(1, 16, 16)
-                plt.imshow(np.transpose(pred_images[-1].cpu().detach().numpy(), (1, 2, 0)))
-                plt.show()
             if save_img:
-                pred_images = model.inference(1, 16, 16)
-                pred_images = np.transpose(pred_images[-1].cpu().detach().numpy(), (1, 2, 0))
-                random_filename = str(uuid.uuid4()) + '.png'
-
-                # Specify the directory where you want to save the image
-                save_directory = ""
-
-                # Create the full path including the directory and filename
-                full_path = os.path.join(save_directory, random_filename)
-                # Save the image with the random filename
-                plt.savefig(full_path, bbox_inches='tight', pad_inches=0)
                 with torch.no_grad():
                     for valid_tensors, _ in valid_loader:
                         break
@@ -97,12 +81,24 @@ def training_loop(n_epochs, optimizer, model, loss_fn, device, data_loader, vali
                     val_img, _ = model(valid_tensors.to(device))
                     save_img_tensors_as_grid(val_img, 4, "recon1")
 
-            model_path = os.path.join('/Users/ayanfe/Documents/Code/VQ-VAE/weights', 'waifu-vqvae_epoch.pth')
+            model_path = os.path.join('./', 'waifu-vqvae_epoch.pth')
             torch.save({
                 'epoch': epoch,
                 'model_state_dict': model.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict(),
             }, model_path)
+            # Reset underused embeddings
+        '''
+        # Reset underused embeddings conditionally
+        if epoch > 1000 and previous_loss is not None and avg_loss_train > previous_loss * 1.25:
+            print("reseting")
+            with torch.no_grad():
+                for batch_imgs, _ in data_loader:
+                    model.reset_underused_embeddings(batch_imgs.to(device), threshold=usage_threshold)
+                    break
+
+        previous_loss = avg_loss_train
+        '''
 
 
 
@@ -136,8 +132,7 @@ if __name__ == "__main__":
     epoch = checkpoint['epoch']
     '''
     
-    
-    print(model.inference(1, 16, 16).shape)
+    #print(model.inference(1, 16, 16).shape)
     with torch.no_grad():
         for valid_tensors, _ in val_loader:
             break
@@ -147,7 +142,7 @@ if __name__ == "__main__":
         save_img_tensors_as_grid(val_img, 4, "recon1")
 
     training_loop(
-        n_epochs=100,
+        n_epochs=200,
         optimizer=optimizer,
         model=model,
         loss_fn=loss_fn,

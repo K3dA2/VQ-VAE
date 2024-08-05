@@ -1,24 +1,15 @@
-import math
 import torch
-import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
 import unittest
 
 class ResNet(nn.Module):
-    def __init__(self, in_channels = 3 ,out_channels = 32):
+    def __init__(self, in_channels=3, out_channels=32):
         super().__init__()
-        if in_channels > 3:
-            norm = 4
-        else:
-            norm = 1
         self.num_channels = out_channels
         self.in_channels = in_channels
         self.network = nn.Sequential(
-            nn.GroupNorm(norm,in_channels),
-            nn.SiLU(),
             nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1),
-            nn.GroupNorm(norm,out_channels),
             nn.SiLU(),
             nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1)
         )
@@ -29,8 +20,8 @@ class ResNet(nn.Module):
 
     def forward(self, x):
         out = self.network(x)
-        return torch.add(out,self.residual_layer(x))
-    
+        return torch.add(out, self.residual_layer(x))
+
 class SelfAttention(nn.Module):
     def __init__(self, channels):
         super(SelfAttention, self).__init__()
@@ -55,61 +46,51 @@ class SelfAttention(nn.Module):
         return attention_value.swapaxes(2, 1).reshape(batch_size, -1, x_size, x_size)
 
 class Encoder(nn.Module):
-    def __init__(self, latent_dim = 32) -> None:
+    def __init__(self, latent_dim=32) -> None:
         super().__init__()
         self.net = nn.Sequential(
             nn.Conv2d(3, 64, kernel_size=3, padding=1),
             nn.ReLU(),
-            nn.Conv2d(64, 128, kernel_size=3, padding=1),
-            nn.ReLU(),
-            nn.Conv2d(128, 128, kernel_size=3, padding=1),
-            nn.ReLU(),
             nn.MaxPool2d(2),
-            nn.Conv2d(128, 256, kernel_size=3, padding=1),
+            nn.Conv2d(64, 256, kernel_size=3, padding=1),
             nn.ReLU(),
             nn.Conv2d(256, 512, kernel_size=3, padding=1),
             nn.ReLU(),
             nn.MaxPool2d(2),
-            ResNet(512,256),
+            ResNet(512, 256),
             nn.ReLU(),
-            ResNet(256,256),
+            ResNet(256, 256),
             nn.ReLU(),
-            nn.Conv2d(256,latent_dim,kernel_size=3, padding=1)
-            
+            ResNet(256, 64),
+            nn.Conv2d(64, latent_dim, kernel_size=3, padding=1)
         )
     
-    def forward(self,img):
+    def forward(self, img):
         out = self.net(img)
-        #print(out.shape)
         return out
 
 class Decoder(nn.Module):
-    def __init__(self, latent_dim = 32) -> None:
+    def __init__(self, latent_dim=32) -> None:
         super().__init__()
         self.net = nn.Sequential(
             nn.Upsample(scale_factor=2),
             nn.Conv2d(latent_dim, 64, kernel_size=3, padding=1),
             nn.ReLU(),
+            ResNet(64, 64),
+            nn.ReLU(),
             nn.Conv2d(64, 128, kernel_size=3, padding=1),
             nn.ReLU(),
-            nn.Conv2d(128, 256, kernel_size=3, padding=1),
-            nn.ReLU(),
-            nn.Conv2d(256, 512, kernel_size=3, padding=1),
-            nn.ReLU(),
-            nn.Conv2d(512, 128, kernel_size=3, padding=1),
-            nn.ReLU(),
+            ResNet(128, 128),
             nn.Upsample(scale_factor=2),
-            ResNet(128,64),
-            nn.ReLU(),
-            ResNet(64,32),
+            ResNet(128, 32),
             nn.ReLU(),
             nn.Conv2d(32, 3, kernel_size=3, padding=1)
         )
     
-    def forward(self,img):
+    def forward(self, img):
         out = self.net(img)
         return out
-    
+
 class TestDecoder(unittest.TestCase):
     def test_decoder_output_shape(self):
         # Create a dummy input image with latent representation size
@@ -123,8 +104,7 @@ class TestDecoder(unittest.TestCase):
         
         print(out.shape)
         # Check the output shape
-        self.assertEqual(out.shape, (2, 3, 64, 64), f"Output shape mismatch: expected (2, 32, 32, 32), got {out.shape}")
-
+        self.assertEqual(out.shape, (2, 3, 64, 64), f"Output shape mismatch: expected (2, 3, 64, 64), got {out.shape}")
 
 if __name__ == '__main__':
     unittest.main()
