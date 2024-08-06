@@ -123,8 +123,7 @@ class VQSampler(nn.Module):
         if y is not None:
             z = y
             c = logits
-            print(z.view(-1).shape)
-            print(c.view(-1,c.size(-1)).shape)
+           
             loss = F.cross_entropy(logits.view(-1, logits.size(-1)), y.view(-1))
         return logits, loss
 
@@ -140,7 +139,9 @@ class TestModels(unittest.TestCase):
         self.assertEqual(output.shape, (batch_size, config.seq_len, config.emb_dim))
 
     def test_vqsampler(self):
-        config = Config()
+        config = Config(
+            emb_dim=8
+        )
         batch_size = 2
         x = torch.randint(0, config.vocab_len, (batch_size, config.seq_len))
 
