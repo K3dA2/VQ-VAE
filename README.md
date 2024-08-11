@@ -14,7 +14,7 @@ Training Details
 
 Hardware: M1 Max MacBook Pro
 Epochs: 100
-Number of Parameters: 31 million
+Number of Parameters: 600k
 The model was trained for 100 epochs, with the training loss plotted over time as shown below:
 
 ![c28bffa5-a74e-4d68-a9e2-45e6716baeba](https://github.com/user-attachments/assets/8c029c9b-fcd0-4229-bdf5-5a8b4cb4b2ce)
