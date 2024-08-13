@@ -13,11 +13,10 @@ A decoder network that reconstructs the input data from the discrete codes.
 Training Details
 
 Hardware: M1 Max MacBook Pro
-Epochs: 100
-Number of Parameters: 600k
-The model was trained for 100 epochs, with the training loss plotted over time as shown below:
 
-![c28bffa5-a74e-4d68-a9e2-45e6716baeba](https://github.com/user-attachments/assets/8c029c9b-fcd0-4229-bdf5-5a8b4cb4b2ce)
+Epochs: 100
+
+Number of Parameters: 600k
 
 ## Reconstruction Results
 
@@ -31,3 +30,10 @@ True Images
 
 Reconstructed Images
 
+![xtrue](https://github.com/user-attachments/assets/af07f3f9-6b38-41d5-8267-05bd1be64fb8)
+
+True Image
+
+![xrecon](https://github.com/user-attachments/assets/66972d5b-3696-4a61-9e4d-b2ee13236ae8)
+
+Reconstructed Image
