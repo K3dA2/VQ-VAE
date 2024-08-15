@@ -1,13 +1,14 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from modules import Encoder, Decoder  # Assuming these are correctly implemented
+from modules import Encoder, Decoder  
+
 
 class VQVAE(nn.Module):
-    def __init__(self, latent_dim=1, num_embeddings=512, beta=0.25, use_ema=True, ema_decay=0.99):
+    def __init__(self, latent_dim=1, num_embeddings=512, beta=0.25, use_ema=True, ema_decay=0.99, e_width = 64, d_width = 64):
         super().__init__()
-        self.encoder = Encoder(latent_dim=latent_dim)
-        self.decoder = Decoder(latent_dim=latent_dim)
+        self.encoder = Encoder(latent_dim=latent_dim, width= e_width)
+        self.decoder = Decoder(latent_dim=latent_dim, width= d_width)
         self.codebook = nn.Embedding(num_embeddings, latent_dim)
         self.register_buffer('ema_cluster_size', torch.zeros(num_embeddings))
         self.register_buffer('ema_w', torch.zeros(num_embeddings, latent_dim))
@@ -18,6 +19,7 @@ class VQVAE(nn.Module):
         self.use_ema = use_ema
         self.ema_decay = ema_decay
         self.register_buffer('usage_count', torch.zeros(num_embeddings))
+        self.num_embeddings = num_embeddings
 
     def forward(self, img):
         # Encode the image
@@ -94,24 +96,20 @@ class VQVAE(nn.Module):
                 random_index = torch.randint(0, z.size(0), (1,))
                 self.codebook.weight.data[idx] = z[random_index].view(-1).data
             self.usage_count[underused_indices] = threshold  # Reset usage count to prevent immediate re-resetting
-
-    def inference(self, batch_size, height=64, width=64):
+    
+    def decode(self,x,height=64, width=64):
         latent_dim = self.latent_dim
-        num_embeddings = self.num_embeddings
-
-        # Generate random indices
-        random_indices = torch.randint(0, num_embeddings, (batch_size, height * width))
-        
         # Get corresponding embeddings from the codebook
-        z_q = self.codebook(random_indices)
-        
+        z_q = self.codebook(x)
+
         # Reshape embeddings to the appropriate shape for the decoder
-        z_q = z_q.permute(0, 2, 1).view(batch_size, latent_dim, height, width)
+        z_q = z_q.permute(0, 2, 1).view(x.size(0), latent_dim, height//4, width//4)
         
         # Generate the output image using the decoder
         output = self.decoder(z_q)
 
         return output
+
     
     def return_indices(self, img):
         # Encode the image
@@ -132,17 +130,4 @@ class VQVAE(nn.Module):
 
         return indices
 
-# Example usage:
-# Define the VQVAE model
-model = VQVAE(latent_dim=1, num_embeddings=512, use_ema=False)
-# Create a dummy input image
-img = torch.randn(2, 3, 64, 64)
-# Pass the image through the model
-out, loss = model(img)
 
-print(f'out shape: {out.shape}')
-print(f'loss: {loss}')
-
-# Generate random output image
-output_img = model.inference(1, 16, 16)
-print(output_img.shape)  # Expected output: torch.Size([1, 3, 16, 16])
