@@ -27,18 +27,18 @@ class ResNet(nn.Module):
     
 
 class Encoder(nn.Module):
-    def __init__(self, latent_dim = 32) -> None:
+    def __init__(self, latent_dim = 32, width = 64) -> None:
         super().__init__()
         self.net = nn.Sequential(
-            nn.Conv2d(3, 64, kernel_size=3, padding=1),
+            nn.Conv2d(3, width, kernel_size=3, padding=1),
             nn.ReLU(),
             nn.MaxPool2d(2),
-            nn.Conv2d(64, 128, kernel_size=3, padding=1),
+            nn.Conv2d(width, width * 2, kernel_size=3, padding=1),
             nn.ReLU(),
             nn.MaxPool2d(2),
-            nn.Conv2d(128, 128, kernel_size=3, padding=1),
+            nn.Conv2d(width * 2, width * 3, kernel_size=3, padding=1),
             nn.ReLU(),
-            ResNet(128,latent_dim)
+            ResNet(width * 3,latent_dim)
         )
     
     def forward(self,img):
@@ -47,18 +47,20 @@ class Encoder(nn.Module):
         return out
 
 class Decoder(nn.Module):
-    def __init__(self, latent_dim = 32) -> None:
+    def __init__(self, latent_dim = 32, width = 64) -> None:
         super().__init__()
         self.net = nn.Sequential(
-            nn.Upsample(scale_factor=2),
-            nn.Conv2d(latent_dim, 64, kernel_size=3, padding=1),
-            nn.ReLU(),
-            nn.Conv2d(64, 128, kernel_size=3, padding=1),
+            ResNet(latent_dim,width * 3),
             nn.ReLU(),
             nn.Upsample(scale_factor=2),
-            nn.Conv2d(128, 256, kernel_size=3, padding=1),
+            ResNet(width * 3,width * 3),
             nn.ReLU(),
-            ResNet(256,3)
+            nn.Conv2d(width * 3, width * 2, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(width * 2, width, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.Upsample(scale_factor=2),
+            nn.Conv2d(width, 3, kernel_size=3, padding=1),
         )
     
     def forward(self,img):
