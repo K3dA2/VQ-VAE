@@ -12,7 +12,7 @@ from utils import get_data_loader, count_parameters, save_img_tensors_as_grid
 import uuid
 
 def training_loop(n_epochs, optimizer, model, loss_fn, device, data_loader, valid_loader,
-                  max_grad_norm=1.0, epoch_start=0, save_img=True, show_img=False,
+                  max_grad_norm=1.0, epoch_start=0, save_img=True, show_img=False,reset = False,
                 ema_alpha=0.99,usage_threshold=1.0):
 
     model.train()
@@ -49,19 +49,6 @@ def training_loop(n_epochs, optimizer, model, loss_fn, device, data_loader, vali
         avg_loss_train = loss_train / len(data_loader)
         avg_mse_loss_train = mse_loss_train / len(data_loader)
         avg_vq_loss_train = vq_loss_train / len(data_loader)
-
-        '''
-        # Update EMA of loss
-        if ema_loss is None:
-            ema_loss = avg_loss_train
-        else:
-            ema_loss = ema_alpha * ema_loss + (1 - ema_alpha) * avg_loss_train
-
-        # Adjust learning rate if average loss increases
-        if scheduler is None:
-            scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=1, factor=0.1)
-        scheduler.step(ema_loss)
-        '''
 
         with open("waifu-vqvae_epoch-loss.txt", "a") as file:
             file.write(f"{avg_loss_train}\n")
@@ -106,12 +93,13 @@ def training_loop(n_epochs, optimizer, model, loss_fn, device, data_loader, vali
             # Reset underused embeddings
         
         # Reset underused embeddings conditionally
-        if epoch > 1000 and previous_loss is not None and avg_loss_train > previous_loss * 1.25:
-            print("reseting")
-            with torch.no_grad():
-                for batch_imgs, _ in data_loader:
-                    model.reset_underused_embeddings(batch_imgs.to(device), threshold=usage_threshold)
-                    break
+        if reset:
+            if epoch > 5 and previous_loss is not None and avg_loss_train > previous_loss * 1.25:
+                print("reseting")
+                with torch.no_grad():
+                    for batch_imgs, _ in data_loader:
+                        model.reset_underused_embeddings(batch_imgs.to(device), threshold=usage_threshold)
+                        break
 
         previous_loss = avg_loss_train
 
