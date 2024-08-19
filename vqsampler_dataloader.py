@@ -3,8 +3,7 @@ from torch.utils.data import Dataset, DataLoader
 import numpy as np
 
 class SequenceDataset(Dataset):
-    def __init__(self, file_path, file_type='txt', vocab_size=513, prepend_value=513):
-        self.vocab_size = vocab_size
+    def __init__(self, file_path, file_type='txt', prepend_value=512):
         self.prepend_value = prepend_value
         self.data = self._read_file(file_path, file_type)
         self.sequences = [list(map(int, line.split())) for line in self.data]
@@ -25,16 +24,16 @@ class SequenceDataset(Dataset):
 
     def __getitem__(self, idx):
         seq = self.sequences[idx]
-        shifted_seq = seq[1:] + [self.prepend_value]  # Shift right and append the specified value at the end
+        shifted_seq = [self.prepend_value] + seq[:-1] 
         return torch.tensor(seq, dtype=torch.long), torch.tensor(shifted_seq, dtype=torch.long)
 
-def get_data_loader(file_path, file_type='txt', batch_size=32, shuffle=True, vocab_size=513, prepend_value=513):
-    dataset = SequenceDataset(file_path, file_type, vocab_size, prepend_value)
+def get_data_loader(file_path, file_type='txt', batch_size=32, shuffle=True, prepend_value=513):
+    dataset = SequenceDataset(file_path, file_type, prepend_value)
     return DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
 
 # Example Usage
 if __name__ == "__main__":
-    file_path = 'indices.txt'  # Replace with your file path
+    file_path = 'train.txt'  # Replace with your file path
     prepend_value = 512  # Replace with your prepend value if needed; default is 513
     data_loader = get_data_loader(file_path, file_type='txt', batch_size=4, prepend_value=prepend_value)
 
