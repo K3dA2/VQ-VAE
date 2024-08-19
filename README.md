@@ -16,7 +16,9 @@ Hardware: M1 Max MacBook Pro
 
 Epochs: 100
 
-Number of Parameters: 600k
+Number of Parameters: 1.6M
+
+The model was trained on Images of size 64x64
 
 ## Reconstruction Results
 
@@ -37,3 +39,15 @@ True Image
 ![xrecon](https://github.com/user-attachments/assets/66972d5b-3696-4a61-9e4d-b2ee13236ae8)
 
 Reconstructed Image
+
+## Samples from unconditional Transfromer geneation
+
+![jkbiugib](https://github.com/user-attachments/assets/5db43d06-7f84-465a-bf4b-a0f612ba0d23)
+![ncjefhuf](https://github.com/user-attachments/assets/febb7cfb-2bfe-41ae-997a-06653617bc27)
+
+![jcjnvjdv](https://github.com/user-attachments/assets/b7686b8f-5d18-4234-8892-7eda10c4b69b)
+![jcnfnnc](https://github.com/user-attachments/assets/18ccd7e0-1912-460a-a6d0-67304a5ff98e)
+
+![nvnovi](https://github.com/user-attachments/assets/7ce599c8-a7e9-40e9-96b3-8e62dad0de00)
+![knvknvl](https://github.com/user-attachments/assets/f90e2271-57a1-4459-9b62-6dbf539015f4)
+
