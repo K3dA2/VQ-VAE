@@ -106,9 +106,9 @@ def training_loop(n_epochs, optimizer, model, loss_fn, device, data_loader, vali
 
 
 if __name__ == "__main__":
-    path = '/Users/ayanfe/Documents/Datasets/Waifus/Train'
-    val_path = '/Users/ayanfe/Documents/Datasets/Waifus/Val'
-    model_path = '/Users/ayanfe/Documents/Code/simple vq-vae/weights/waifu-vqvae_epoch.pth'
+    path = '' # Path to dataset
+    val_path = '' # Path to validation set
+    model_path = ''  # Path to Model if trained previously
     epoch = 0
 
     device = "cpu"
