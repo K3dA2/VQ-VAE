@@ -28,17 +28,9 @@ Below are some examples of original images and their corresponding reconstructio
 
 True Images
 
-![recon1](https://github.com/user-attachments/assets/3b62decb-4512-4214-a67c-bf231bcead32)
+![recon1](https://github.com/user-attachments/assets/c0a98853-4158-4f82-b8a8-e165010ab41b)
 
 Reconstructed Images
-
-![xtrue](https://github.com/user-attachments/assets/af07f3f9-6b38-41d5-8267-05bd1be64fb8)
-
-True Image
-
-![xrecon](https://github.com/user-attachments/assets/66972d5b-3696-4a61-9e4d-b2ee13236ae8)
-
-Reconstructed Image
 
 ## Samples from unconditional Transfromer geneation
 
