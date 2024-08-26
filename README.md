@@ -24,7 +24,7 @@ The model was trained on Images of size 64x64
 
 Below are some examples of original images and their corresponding reconstructions by the VQ-VAE model:
 
-![true1](https://github.com/user-attachments/assets/4ced3f78-7c2d-4920-a67c-aa29a9cd6c83)
+![true1](https://github.com/user-attachments/assets/878207cc-9031-446c-b82e-83fcd9d5948d)
 
 True Images
 
