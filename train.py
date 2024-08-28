@@ -118,7 +118,7 @@ if __name__ == "__main__":
         device = "mps"
     print(f"using device: {device}")
 
-    model = VQVAE(latent_dim = 12, num_embeddings=512, beta=0.25, use_ema=False, e_width=64,d_width=64)  # Assuming Unet is correctly imported and defined
+    model = VQVAE(latent_dim = 16, num_embeddings=512, beta=0.25, use_ema=False, e_width=64,d_width=64)  # Assuming Unet is correctly imported and defined
     model.to(device)
     optimizer = optim.AdamW(model.parameters(), lr=5e-4)
     loss_fn = nn.MSELoss().to(device)
